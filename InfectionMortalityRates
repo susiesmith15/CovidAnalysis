@@ -241,3 +241,167 @@ fig.update_layout(
                         size=18,
                         color='#7f7f7f'))
 fig.show()
+
+# Widget graphs: Cases & Deaths
+
+df=table2
+
+# create dropdown widget for country selection
+textbox = widgets.Dropdown(
+    description='Country:   ',
+#     value='',
+    options=df['Country'].unique().tolist()
+)
+
+container = widgets.HBox([textbox])
+
+# create data trace
+trace1 = go.Scatter( x=df['Date']
+                    ,y=df['Cases']
+#                     ,yaxis='y2'
+                    ,mode='lines'
+                    ,text=df['Country']
+                    ,opacity=0.75
+                    ,hovertemplate =
+                        '<b>Country:</b><i> %{text} </i><br>'+
+                        'Date: %{x}<br>'+
+                        'Cases: <b>%{y}</b><br>'+
+                        '<extra></extra>'
+                    ,name='Cases')
+
+trace2 = go.Bar(x=df['Date']
+                    ,y=df['Deaths']
+#                     ,yaxis='y1'
+                    ,text=df['Country']
+                    ,opacity=0.75
+                    ,hovertemplate =
+                        'Country:<b> %{text} </b><br>'+
+                        'Date: %{x}<br>'+
+                        'Deaths: <b>%{y}</b><br>'+
+                        '<extra></extra>'
+                    ,name='Deaths')
+
+# create plot, with data and layout variables
+# g = go.FigureWidget(data=[trace1,trace2]
+#                     ,layout=go.Layout(title=dict(text='New Reported Cases of COVID-19')
+#                                      ,xaxis_title='Date'
+#                                      ,yaxis_title='No. of Cases/Deaths'
+#                                      ,font=dict(family='Courier New, monospace'
+#                                                 ,size=16
+#                                                 ,color='#7f7f7f')
+#                                      ,showlegend=True
+#                                      )
+#                     )
+
+g = go.FigureWidget(data=[trace1,trace2]
+                    ,layout=go.Layout(title=dict(text='New Reported Cases & Deaths by COVID-19')
+                                     ,xaxis=dict(title='Date',showgrid=False)
+                                     ,yaxis=dict(title='Number',showgrid=False)
+                                     ,font=dict(family='Courier New, monospace'
+                                                ,size=16
+                                                ,color='#7f7f7f')
+                                     ,showlegend=True
+                                     )
+                    )
+
+# create function to check widget input is in dataframe - NOT NEEDED
+def validate():
+    if textbox.value in df['Country'].unique():
+        return True
+    else:
+        return False
+
+
+# create function to filter dataframe for the widget's selected country
+def response(change):
+    if validate():
+        filter_list = [i for i in
+                       zip(df['Country'] == textbox.value)]
+        temp_df = df[filter_list]
+    else:
+        filter_list = [i for i in
+                       zip(df['Country'] == 'France')]
+        temp_df = df[filter_list]
+        
+# set variables equal to new df & update trace with them^
+    v1 = temp_df['Date']
+    v2 = temp_df['Cases']
+    v3 = temp_df['Country']
+    v4 = temp_df['Deaths']
+    with g.batch_update():
+        g.data[0].x = v1
+        g.data[0].y = v2
+        g.data[0].text = v3
+        g.data[1].x = v1
+        g.data[1].y = v4
+        g.data[1].text = v3
+        g.layout['title']['text'] = 'New Reported Cases & Deaths by Covid-19: '+ textbox.value
+        
+# observe ?? not sure what this is for
+textbox.observe(response,names="value")
+
+
+# create app with the widget and the plot
+# container = widgets.HBox([textbox])
+app = widgets.VBox([container,
+              g])
+
+app
+
+
+main_table = main_table.sort_values('AdvancePolicies',ascending=False)
+# main_table = main_table[main_table['Country']!='United States of America']
+
+fig = go.Figure()
+
+fig.add_trace(go.Bar(
+    x=main_table['Country'],
+    y=main_table['AdvancePolicies'],
+    yaxis='y1',
+    text=main_table['InfectionRate'],
+    marker = dict(color = '#00CED1'),
+    hovertemplate =
+    '<b>%{x}: </b><br>'+
+    'Infection Rate:<i> %{text: .2f}% </i><br>'+
+    'Pre-emptive Policies:<i> %{y} </i><br>'+
+    '<extra></extra>',
+    name='Pre-emptive Policies',
+    showlegend=True))
+
+fig.add_trace(go.Scatter(
+    x=main_table['Country'],
+    y=main_table['InfectionRate'],
+    yaxis='y2',
+    text=main_table['AdvancePolicies'],
+    mode='markers',
+    marker = dict(color = '#FF6347'),
+    hovertemplate =
+    '<b>%{x}: </b><br>'+
+    'Infection Rate:<i> %{y:.2f}% </i><br>'+
+    'Pre-emptive Policies:<i> %{text} </i><br>'+
+    '<extra></extra>',
+    name='Infection Rate',
+    showlegend=True))
+    
+
+fig.update_layout(
+                    title='COVID-19 Pre-emptive Policies by Country',
+                    xaxis=dict(title='Country'
+                               ,showgrid=False
+                               ,showticklabels=False),
+                    yaxis=dict(title='Pre-emptive Policies Implemented'
+                               ,showgrid=False),
+                    yaxis2=dict(title='Infection Rate'
+                                      ,overlaying='y'
+                                      ,side='right'
+                                      ,showgrid=False),
+                    width=1000,
+                    height=700,
+                    legend= {'itemsizing': 'constant'},
+#                     legend=dict(x=-.1),
+                    font=dict(
+                        family='Courier New, monospace',
+                        size=14,
+                        color='#7f7f7f'))
+fig.show()
+
