@@ -1,7 +1,6 @@
 import pandas as pd
-df = pd.read_excel('/Users/smiths4/Documents/WhiteHat Training/Covid1v3.xlsx', sheet_name='Database')
-df2 = pd.read_excel('/Users/smiths4/Documents/WhiteHat Training/Covid2v3.xlsx')
-df3 = pd.read_excel('/Users/smiths4/Documents/WhiteHat Training/Countries.xlsx')
+df = pd.read_excel('/Users/smiths4/Documents/WhiteHat Training/Covid1v4.xlsx', sheet_name='Database')
+df2 = pd.read_excel('/Users/smiths4/Documents/WhiteHat Training/Covid2v4.xlsx')
 
 # Clean original tables
 pd.set_option('display.max_rows', None)
@@ -23,11 +22,11 @@ table2.rename(columns={'dateRep':'Date'
                        ,'continentExp':'Region'}, inplace=True)
 
 table2['Country'] = table2['Country'].str.replace('_', ' ')
+table1
 
-table1 = pd.merge(df3
-                 ,table1
-                 ,on='Country'
-                 ,how='left')
+firstpolicy = table1.sort_values(['Country','Date'],ascending=True).groupby('Country', as_index=False).first()
+uk = table1[table1['Country']=='United Kingdom']
+uk
 
 # First Case by Country
 first_case = table2[table2['Cases'] > 0]
@@ -42,7 +41,10 @@ table1 = pd.merge(table1
 table1.rename(columns={'Date_x':'PolicyDate','Date_y':'FirstCase'},inplace=True)
 # table1.PolicyType.unique()
 
-# table1
+# from datetime import datetime
+# table1['FirstCase'] = table1.apply(lambda x : datetime.strptime(x['FirstCase'], r'%d/%m/%Y'), axis=1)
+
+table1
 
 # Total Policies vs Date of first case
 AdvancePolicyType = table1[table1['PolicyDate']<table1['FirstCase']]
@@ -85,43 +87,47 @@ table3['Population'] = population
 
 table3.reset_index(inplace=True)
 
-main_table = pd.merge(table3
+table3['InfectionRate'] = table3.apply(lambda x : x['Cases']/x['Population']*100, axis=1)
+table3['MortalityRate'] = table3.apply(lambda x : x['Deaths']/x['Population']*100, axis=1)
+table3['DeathCaseRate'] = table3.apply(lambda x : x['Deaths']/x['Cases'], axis=1)
+
+
+main_table1 = pd.merge(table3
                      ,region
                      ,on='Country'
                      ,how='left')
 
-main_table = pd.merge(main_table
+main_table2 = pd.merge(main_table1
                 ,AdvancePolicy
                 ,on='Country'
                 ,how='left')
 
-main_table = pd.merge(main_table
+main_table3 = pd.merge(main_table2
                      ,LatePolicy
                      ,on='Country'
                      ,how='left')
 
-main_table = pd.merge(main_table
+main_table = pd.merge(main_table3
                      ,policies
                      ,on='Country'
                      ,how='left')
 
-socialdis = table1[table1['PolicyType']=='Social distancing']
-socialdis
-SDpolicies = socialdis.sort_values('Country',ascending=True).groupby('Country', as_index=False).count()
-SDpolicies = SDpolicies[['Country','TotalMeasures']]
-SDpolicies.rename(columns={'TotalMeasures':'SDPolicies'},inplace=True)
 
 
-main_table = pd.merge(main_table
-                      ,SDpolicies
-                      ,on='Country'
-                      ,how='left')
+# socialdis = table1[table1['PolicyType']=='Social distancing']
+# socialdis
+# SDpolicies = socialdis.sort_values('Country',ascending=True).groupby('Country', as_index=False).count()
+# SDpolicies = SDpolicies[['Country','TotalMeasures']]
+# SDpolicies.rename(columns={'TotalMeasures':'SDPolicies'},inplace=True)
+
+
+# main_table = pd.merge(main_table
+#                       ,SDpolicies
+#                       ,on='Country'
+#                       ,how='left')
 
 main_table = main_table[main_table['Cases']>0]
 
-main_table['InfectionRate'] = main_table.apply(lambda x : x['Cases']/x['Population']*100, axis=1)
-main_table['MortalityRate'] = main_table.apply(lambda x : x['Deaths']/x['Population']*100, axis=1)
-main_table['DeathCaseRate'] = main_table.apply(lambda x : x['Deaths']/x['Cases']*100, axis=1)
 main_table
 
 # PLOTLY GRAPH - Mortality/Infection
@@ -228,6 +234,38 @@ fig.add_trace(go.Scatter(
     showlegend = True))
     
 # fig.update_traces(marker=dict(size={'itemsizing': 'constant'}))
+fig.add_annotation(
+            x=0.51,
+            y=0.029,
+            xref="x",
+            yref="y",
+            text="USA: Most Deaths",
+#             showarrow=True,
+            arrowhead=5,
+            ax=70,
+            ay=-40,
+            font=dict(
+                    family='Courier New, monospace',
+                    size=10,
+                    color='#7f7f7f')
+)
+fig.add_annotation(
+            x=1.90,
+            y=0.12,
+            xref="x",
+            yref="y",
+            text="San Marino: Highest IR & MR",
+#             showarrow=True,
+            arrowhead=5,
+            ax=-70,
+            ay=40,
+            font=dict(
+                    family='Courier New, monospace',
+                    size=10,
+                    color='#7f7f7f')
+)
+
+
 
 fig.update_layout(
                     title='COVID-19 Infection & Mortality Rates',
@@ -249,7 +287,7 @@ df=table2
 # create dropdown widget for country selection
 textbox = widgets.Dropdown(
     description='Country:   ',
-#     value='',
+     value='France',
     options=df['Country'].unique().tolist()
 )
 
@@ -348,9 +386,8 @@ app = widgets.VBox([container,
 
 app
 
-
+# Pre-emptive policies vs Infection Rate 
 main_table = main_table.sort_values('AdvancePolicies',ascending=False)
-# main_table = main_table[main_table['Country']!='United States of America']
 
 fig = go.Figure()
 
@@ -374,7 +411,7 @@ fig.add_trace(go.Scatter(
     yaxis='y2',
     text=main_table['AdvancePolicies'],
     mode='markers',
-    marker = dict(color = '#FF6347'),
+    marker = dict(color = '#FF6347',symbol='x'),
     hovertemplate =
     '<b>%{x}: </b><br>'+
     'Infection Rate:<i> %{y:.2f}% </i><br>'+
@@ -384,8 +421,27 @@ fig.add_trace(go.Scatter(
     showlegend=True))
     
 
+fig.add_annotation(
+            x=105,
+            y=130,
+            xref="x",
+            yref="y",
+            text=
+            'Infection rate rises as<br>' + 
+            'the number of pre-emptive<br>' + 
+            'policies taken by a country falls',
+#             showarrow=False,
+#             arrowhead=5,
+            ax=0,
+            ay=0,
+            font=dict(
+                    family='Courier New, monospace',
+                    size=12,
+                    color='#7f7f7f')
+)
+    
 fig.update_layout(
-                    title='COVID-19 Pre-emptive Policies by Country',
+                    title='COVID-19 Pre-emptive Policies vs Infection Rate by Country',
                     xaxis=dict(title='Country'
                                ,showgrid=False
                                ,showticklabels=False),
@@ -394,9 +450,10 @@ fig.update_layout(
                     yaxis2=dict(title='Infection Rate'
                                       ,overlaying='y'
                                       ,side='right'
-                                      ,showgrid=False),
+                                      ,showgrid=False
+                                      ,ticksuffix='%'),
                     width=1000,
-                    height=700,
+                    height=600,
                     legend= {'itemsizing': 'constant'},
 #                     legend=dict(x=-.1),
                     font=dict(
@@ -405,3 +462,83 @@ fig.update_layout(
                         color='#7f7f7f'))
 fig.show()
 
+AdvancePolicyType
+AdvPolType = pd.merge(AdvancePolicyType
+                     ,main_table1
+                     ,on='Country'
+                     ,how='right')
+AdvPolType
+
+# MODELLING graph
+
+# Pre-emptive policies vs Infection Rate 
+main_table = main_table.sort_values('AdvancePolicies',ascending=False)
+
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(
+    x=main_table['AdvancePolicies'],
+    y=main_table['InfectionRate'],
+    text=main_table['Country'],
+    mode='markers',
+    marker = dict(color = '#00CED1',symbol='x'),
+    hovertemplate =
+    '<b>%{text}: </b><br>'+
+    'Infection Rate:<i> %{y:.2f}% </i><br>'+
+    'Pre-emptive Policies:<i> %{x} </i><br>'+
+    '<extra></extra>',
+    name='Country'))
+    
+    
+fig.update_layout(
+                    title='COVID-19 Pre-emptive Policies vs Infection Rate by Country',
+                    xaxis=dict(title='Advance Policies'
+                               ,showgrid=False),
+                    yaxis=dict(title='Infection Rate'
+                                      ,showgrid=False
+                                      ,ticksuffix='%'),
+                    width=900,
+                    height=600,
+                    legend= {'itemsizing': 'constant'},
+#                     legend=dict(x=-.1),
+                    font=dict(
+                        family='Courier New, monospace',
+                        size=14,
+                        color='#7f7f7f'))
+fig.show()
+
+# Correlation
+from scipy.stats import pearsonr
+
+main_table['AdvancePolicies'] = main_table['AdvancePolicies'].fillna(0)
+main_table['InfectionRate'] = main_table['InfectionRate'].fillna(0)
+
+corr, _ = pearsonr(main_table['AdvancePolicies'], main_table['InfectionRate'])
+print(corr)
+
+import numpy as np  
+import matplotlib.pyplot as plt  
+import seaborn as seabornInstance 
+from sklearn.model_selection import train_test_split 
+from sklearn.linear_model import LinearRegression
+from sklearn import metrics
+%matplotlib inline
+
+data = main_table
+plt.figure(figsize=(12, 6))
+X = data.iloc[:, 8].values.reshape(-1, 1)  # values converts it into a numpy array
+Y = data.iloc[:, 4].values.reshape(-1, 1) 
+linear_regressor = LinearRegression()  # create object for the class
+linear_regressor.fit(X, Y)  # perform linear regression with X and Y
+Y_pred = linear_regressor.predict(X)  # make predictions for Y
+plt.scatter(X, Y)
+plt.plot(X, Y_pred, color='red')
+plt.xlabel('Infection Rate')
+plt.ylabel('Advance Policies')
+plt.show()
+
+linear_regressor.coef_
+
+linear_regressor.intercept_
+
+print('R2:', metrics.r2_score(Y, Y_pred))
